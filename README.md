@@ -38,35 +38,95 @@ Se han creado las siguientes tablas:
 - subcategory_id
 ```
 
-## 🔧 Instalación
+## 🔧 Instalación (Proyecto Clonado)
 
-1. **Instalar dependencias**:
-```bash
+Si clonaste el proyecto y no tiene datos, sigue estos pasos:
+
+### Windows (PowerShell):
+```powershell
+# 1. Instalar dependencias de PHP
 composer install
+
+# 2. Crear el archivo de configuración
+copy .env.example .env
+
+# 3. Generar la clave de la aplicación
+php artisan key:generate
+
+# 4. Crear el archivo de base de datos SQLite
+New-Item -ItemType File -Path database/database.sqlite -Force
+
+# 5. Ejecutar las migraciones (crea las tablas)
+php artisan migrate
+
+# 6. Migrar el JSON a la base de datos
+php artisan db:seed
+
+# 7. Iniciar el servidor
+php artisan serve
 ```
 
-2. **Configurar base de datos**:
-El archivo `.env` ya está configurado para SQLite:
+### Linux/Mac (Bash):
+```bash
+# 1. Instalar dependencias de PHP
+composer install
+
+# 2. Crear el archivo de configuración
+cp .env.example .env
+
+# 3. Generar la clave de la aplicación
+php artisan key:generate
+
+# 4. Crear el archivo de base de datos SQLite
+touch database/database.sqlite
+
+# 5. Ejecutar las migraciones (crea las tablas)
+php artisan migrate
+
+# 6. Migrar el JSON a la base de datos
+php artisan db:seed
+
+# 7. Iniciar el servidor
+php artisan serve
+```
+
+### ¿Qué hace cada comando?
+
+- **`composer install`**: Instala todas las dependencias de Laravel
+- **`copy .env.example .env`**: Crea el archivo de configuración
+- **`php artisan key:generate`**: Genera una clave única para la aplicación
+- **`New-Item database/database.sqlite`**: Crea el archivo de base de datos vacío
+- **`php artisan migrate`**: Crea todas las tablas (categories, subcategories, accessories, admins)
+- **`php artisan db:seed`**: **Migra los 304 productos del archivo `resources/accesories.json` a la base de datos**
+- **`php artisan serve`**: Inicia el servidor en http://127.0.0.1:8000
+
+## 📁 Archivo de Datos
+
+El archivo JSON original se encuentra en:
+```
+resources/accesories.json
+```
+
+Contiene **304 accesorios** organizados en **6 categorías** con sus respectivas subcategorías.
+
+## 🔧 Configuración de Base de Datos
+
+El archivo `.env` está configurado para SQLite:
 ```
 DB_CONNECTION=sqlite
 ```
 
-3. **Ejecutar migraciones y seeders**:
-```bash
-php artisan migrate:fresh --seed
+El archivo de base de datos se crea automáticamente en:
+```
+database/database.sqlite
 ```
 
-Esto creará:
-- ✅ Todas las tablas necesarias
-- ✅ 304 accesorios migrados desde el JSON
-- ✅ 6 categorías
-- ✅ Múltiples subcategorías
-- ✅ Usuario admin (usuario: **admin**, contraseña: **admin**)
+## 👤 Credenciales de Administrador
 
-4. **Iniciar servidor**:
-```bash
-php artisan serve
-```
+Después de ejecutar `php artisan db:seed`, se crea un usuario administrador:
+
+- **Usuario**: `admin`
+- **Contraseña**: `admin`
 
 ## 🌐 Rutas del Sistema
 

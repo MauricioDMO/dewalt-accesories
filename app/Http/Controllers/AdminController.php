@@ -26,17 +26,56 @@ class AdminController extends Controller
         return view('admin.dashboard', compact('totalAccessories', 'totalCategories', 'totalSubcategories', 'recentAccessories'));
     }
 
-    public function accessories()
+    public function accessories(Request $request)
     {
         if (!session('admin_id')) {
             return redirect()->route('login');
         }
 
-        $accessories = Accessory::with(['category', 'subcategory'])
-            ->orderBy('name')
-            ->paginate(20);
+        $query = Accessory::with(['category', 'subcategory']);
 
-        return view('admin.accessories.index', compact('accessories'));
+        // Filtro por búsqueda
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('code', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        // Filtro por categoría
+        if ($request->has('category') && $request->category != '') {
+            $query->where('category_id', $request->category);
+        }
+
+        // Filtro por subcategoría
+        if ($request->has('subcategory') && $request->subcategory != '') {
+            $query->where('subcategory_id', $request->subcategory);
+        }
+
+        // Ordenamiento
+        $sortBy = $request->get('sort', 'name');
+        $sortOrder = $request->get('order', 'asc');
+        
+        if ($sortBy === 'price') {
+            $query->orderBy('price', $sortOrder);
+        } elseif ($sortBy === 'code') {
+            $query->orderBy('code', $sortOrder);
+        } else {
+            $query->orderBy('name', $sortOrder);
+        }
+
+        $accessories = $query->paginate(20);
+        $categories = Category::all();
+
+        // Obtener subcategorías de la categoría seleccionada
+        $selectedCategoryId = $request->get('category');
+        $subcategories = $selectedCategoryId 
+            ? Subcategory::where('category_id', $selectedCategoryId)->orderBy('name')->get()
+            : collect();
+
+        return view('admin.accessories.index', compact('accessories', 'categories', 'subcategories'));
     }
 
     public function createAccessory()
