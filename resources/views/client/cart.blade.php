@@ -40,7 +40,7 @@
                                 <!-- Imagen del producto -->
                                 <div class="w-24 h-24 flex-shrink-0">
                                     @if($item['image'])
-                                        <img src="{{'https://construfijaciones.com' . $item['image'] }}" alt="{{ $item['name'] }}" class="w-full h-full object-cover rounded">
+                                        <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" class="w-full h-full object-cover rounded">
                                     @else
                                         <div class="w-full h-full bg-gray-200 rounded flex items-center justify-center">
                                             <span class="text-gray-400">Sin imagen</span>
