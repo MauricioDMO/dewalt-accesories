@@ -48,6 +48,9 @@
                 <a href="{{ route('admin.subcategories') }}" class="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium rounded-md {{ request()->routeIs('admin.subcategories*') ? 'text-yellow-600 bg-yellow-100' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' }}">
                     Subcategorías
                 </a>
+                <a href="{{ route('admin.orders') }}" class="mt-1 group flex items-center px-2 py-2 text-base leading-6 font-medium rounded-md {{ request()->routeIs('admin.orders*') ? 'text-yellow-600 bg-yellow-100' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50' }}">
+                    Órdenes de Compra
+                </a>
             </nav>
         </aside>
 

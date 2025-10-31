@@ -101,8 +101,29 @@
             </div>
 
             <!-- Botones de acción -->
-            <div class="mt-6">
-                <a href="{{ route('home') }}" class="block w-full text-center bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded">
+            <div class="mt-6 space-y-3">
+                <form action="{{ route('cart.add', $accessory->id) }}" method="POST" class="space-y-3">
+                    @csrf
+                    <div class="flex items-center space-x-4">
+                        <label for="quantity" class="text-sm font-medium text-gray-700">Cantidad:</label>
+                        <input 
+                            type="number" 
+                            id="quantity" 
+                            name="quantity" 
+                            value="1" 
+                            min="1" 
+                            max="99"
+                            class="w-20 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                        >
+                    </div>
+                    <button type="submit" class="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-bold py-3 px-6 rounded-lg flex items-center justify-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        <span>Agregar al Carrito</span>
+                    </button>
+                </form>
+                <a href="{{ route('home') }}" class="block w-full text-center bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg">
                     ← Volver al catálogo
                 </a>
             </div>

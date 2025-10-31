@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'wompi' => [
+        'api_url' => env('WOMPI_API_URL', 'https://api.wompi.sv'),
+        'app_id' => env('WOMPI_APP_ID'),
+        'api_secret' => env('WOMPI_API_SECRET'),
+    ],
+
 ];

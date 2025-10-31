@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Accessory;
 use App\Models\Category;
 use App\Models\Subcategory;
+use App\Models\Order;
 use Illuminate\Http\Request;
 
 class AdminController extends Controller
@@ -18,12 +19,16 @@ class AdminController extends Controller
         $totalAccessories = Accessory::count();
         $totalCategories = Category::count();
         $totalSubcategories = Subcategory::count();
+        $totalOrders = Order::count();
         $recentAccessories = Accessory::with(['category', 'subcategory'])
             ->latest()
             ->take(5)
             ->get();
+        $recentOrders = Order::latest()
+            ->take(5)
+            ->get();
 
-        return view('admin.dashboard', compact('totalAccessories', 'totalCategories', 'totalSubcategories', 'recentAccessories'));
+        return view('admin.dashboard', compact('totalAccessories', 'totalCategories', 'totalSubcategories', 'totalOrders', 'recentAccessories', 'recentOrders'));
     }
 
     public function accessories(Request $request)
@@ -171,5 +176,70 @@ class AdminController extends Controller
     {
         $subcategories = Subcategory::where('category_id', $categoryId)->get();
         return response()->json($subcategories);
+    }
+
+    // Métodos para gestionar órdenes
+    public function orders(Request $request)
+    {
+        if (!session('admin_id')) {
+            return redirect()->route('login');
+        }
+
+        $query = Order::with('items');
+
+        // Filtro por búsqueda
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('order_number', 'like', "%{$search}%")
+                  ->orWhere('customer_name', 'like', "%{$search}%")
+                  ->orWhere('customer_email', 'like', "%{$search}%");
+            });
+        }
+
+        // Filtro por estado
+        if ($request->has('status') && $request->status != '') {
+            $query->where('status', $request->status);
+        }
+
+        // Filtro por estado de pago
+        if ($request->has('payment_status') && $request->payment_status != '') {
+            $query->where('payment_status', $request->payment_status);
+        }
+
+        // Ordenamiento
+        $sortBy = $request->get('sort', 'created_at');
+        $sortOrder = $request->get('order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        $orders = $query->paginate(20);
+
+        return view('admin.orders.index', compact('orders'));
+    }
+
+    public function showOrder(Order $order)
+    {
+        if (!session('admin_id')) {
+            return redirect()->route('login');
+        }
+
+        $order->load('items.accessory');
+        return view('admin.orders.show', compact('order'));
+    }
+
+    public function updateOrderStatus(Request $request, Order $order)
+    {
+        if (!session('admin_id')) {
+            return redirect()->route('login');
+        }
+
+        $validated = $request->validate([
+            'status' => 'required|in:pending,processing,completed,cancelled',
+        ]);
+
+        $order->update($validated);
+
+        return redirect()->route('admin.orders.show', $order)
+            ->with('success', 'Estado de la orden actualizado exitosamente');
     }
 }
