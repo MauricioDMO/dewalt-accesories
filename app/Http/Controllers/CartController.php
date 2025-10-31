@@ -203,8 +203,9 @@ class CartController extends Controller
         $wompiService = new WompiService();
 
         // Construir URL de redirect con verificación
-        $appUrl = config('app.url');
-        $redirectUrl = $appUrl . '/pago-procesado?id=' . $order->order_number . '&code=' . $verificationCode;
+        // Usar url() helper en lugar de config('app.url') para incluir puerto automáticamente
+        $redirectUrl = url('/pago-procesado?id=' . $order->order_number . '&code=' . $verificationCode);
+        $webhookUrl = url('/webhook/wompi');
 
         $resultadoWompi = $wompiService->crearEnlacePago([
             'monto' => (float) $total,
@@ -212,7 +213,7 @@ class CartController extends Controller
             'urlRedirect' => $redirectUrl,
             'configuracion' => [
                 'emailsNotificacion' => config('mail.from.address'),
-                'urlWebhook' => $appUrl . '/webhook/wompi',
+                'urlWebhook' => $webhookUrl,
                 'notificarTransaccionCliente' => true
             ],
             'datosAdicionales' => [
@@ -331,24 +332,106 @@ class CartController extends Controller
 
         // Consultar estado del pago en Wompi
         $wompiService = new WompiService();
+        
+        // Si Wompi envió el ID de la transacción en la URL, consultarla directamente
+        $idTransaccion = $request->query('idTransaccion');
+        
+        if ($idTransaccion) {
+            Log::info('Consultando transacción directa desde parámetros de URL', [
+                'idTransaccion' => $idTransaccion,
+                'order_number' => $order->order_number
+            ]);
+            
+            $resultadoTransaccion = $wompiService->consultarTransaccion($idTransaccion);
+            
+            if ($resultadoTransaccion['success'] && isset($resultadoTransaccion['data'])) {
+                $transaccion = $resultadoTransaccion['data'];
+                
+                $paymentStatus = 'pending';
+                $orderStatus = 'pending';
+                
+                if (isset($transaccion['esAprobada']) && $transaccion['esAprobada'] === true) {
+                    $paymentStatus = 'paid';
+                    $orderStatus = 'processing';
+                } elseif (isset($transaccion['esAprobada']) && $transaccion['esAprobada'] === false) {
+                    $paymentStatus = 'failed';
+                    $orderStatus = 'cancelled';
+                }
+                
+                // Actualizar orden con datos de la transacción
+                $order->update([
+                    'wompi_transaccion_id' => $transaccion['idTransaccion'] ?? null,
+                    'wompi_codigo_autorizacion' => $transaccion['codigoAutorizacion'] ?? null,
+                    'wompi_fecha_pago' => isset($transaccion['fechaTransaccion']) ? 
+                        \Carbon\Carbon::parse($transaccion['fechaTransaccion']) : now(),
+                    'payment_status' => $paymentStatus,
+                    'status' => $orderStatus
+                ]);
+                
+                Log::info('Pago actualizado desde transacción directa', [
+                    'order_number' => $order->order_number,
+                    'payment_status' => $paymentStatus,
+                    'transaccion' => $transaccion
+                ]);
+                
+                return view('client.payment-processed', compact('order'));
+            }
+        }
+        
+        // Si no hay idTransaccion en URL, consultar el enlace
         $resultado = $wompiService->consultarEnlacePago($order->wompi_enlace_id);
 
         if ($resultado['success'] && isset($resultado['data'])) {
             $enlace = $resultado['data'];
 
-            // Actualizar orden con datos del pago
-            $order->update([
-                'wompi_codigo_autorizacion' => $enlace['codigoAutorizacion'] ?? null,
-                'wompi_fecha_pago' => isset($enlace['fechaTransaccion']) ? 
-                    \Carbon\Carbon::parse($enlace['fechaTransaccion']) : now(),
-                'payment_status' => ($enlace['esAprobada'] ?? false) ? 'paid' : 'failed',
-                'status' => ($enlace['esAprobada'] ?? false) ? 'processing' : 'cancelled'
+            Log::info('Datos del enlace Wompi', [
+                'order_number' => $order->order_number,
+                'enlace_data' => $enlace
             ]);
+
+            // Determinar estado del pago
+            $paymentStatus = 'pending';
+            $orderStatus = 'pending';
+            
+            // Verificar si hay transacciones en el enlace
+            if (isset($enlace['transacciones']) && is_array($enlace['transacciones']) && count($enlace['transacciones']) > 0) {
+                // Obtener la última transacción
+                $transaccion = end($enlace['transacciones']);
+                
+                if (isset($transaccion['esAprobada']) && $transaccion['esAprobada'] === true) {
+                    $paymentStatus = 'paid';
+                    $orderStatus = 'processing';
+                } elseif (isset($transaccion['esAprobada']) && $transaccion['esAprobada'] === false) {
+                    $paymentStatus = 'failed';
+                    $orderStatus = 'cancelled';
+                }
+
+                // Actualizar orden con datos del pago
+                $order->update([
+                    'wompi_transaccion_id' => $transaccion['idTransaccion'] ?? null,
+                    'wompi_codigo_autorizacion' => $transaccion['codigoAutorizacion'] ?? null,
+                    'wompi_fecha_pago' => isset($transaccion['fechaTransaccion']) ? 
+                        \Carbon\Carbon::parse($transaccion['fechaTransaccion']) : now(),
+                    'payment_status' => $paymentStatus,
+                    'status' => $orderStatus
+                ]);
+            } else {
+                // No hay transacciones aún, el pago está pendiente o en proceso
+                Log::info('No se encontraron transacciones para el enlace', [
+                    'order_number' => $order->order_number,
+                    'wompi_enlace_id' => $order->wompi_enlace_id
+                ]);
+            }
 
             Log::info('Pago procesado', [
                 'order_number' => $order->order_number,
                 'payment_status' => $order->payment_status,
                 'wompi_codigo' => $order->wompi_codigo_autorizacion
+            ]);
+        } else {
+            Log::warning('No se pudo consultar el estado del pago en Wompi', [
+                'order_number' => $order->order_number,
+                'resultado' => $resultado
             ]);
         }
 
