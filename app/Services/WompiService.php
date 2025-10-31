@@ -122,9 +122,7 @@ class WompiService
             // Solo agregar webhook si NO es local (Wompi rechaza webhooks locales con 403)
             if (!empty($datos['configuracion']['urlWebhook'])) {
                 $webhookUrl = $datos['configuracion']['urlWebhook'];
-                $isLocalUrl = str_contains($webhookUrl, 'localhost') || 
-                              str_contains($webhookUrl, '127.0.0.1') || 
-                              str_contains($webhookUrl, '::1');
+                $isLocalUrl = str_contains($webhookUrl, 'localhost');
                 
                 if (!$isLocalUrl && filter_var($webhookUrl, FILTER_VALIDATE_URL)) {
                     $payload['configuracion']['urlWebhook'] = $webhookUrl;
